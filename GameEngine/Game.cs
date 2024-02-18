@@ -3,6 +3,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using OpenTK.Mathematics;
 
 namespace GameEngine
 {
@@ -14,10 +15,9 @@ namespace GameEngine
 
         Shader shader;
 
-        int VBO;
-        int VAO;
-
-        int EBO;
+        int vbo;
+        int vao;
+        int ebo;
 
         uint[] indices;
         float[] vertices;
@@ -28,25 +28,7 @@ namespace GameEngine
 
             GL.ClearColor(0.03f, 0.0f, 0.09f, 1.0f);
 
-            VertexData vertexData = board.GetVertexData();
-            vertices = vertexData.vertices;
-            indices = vertexData.indices;
-
-            VBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
-
-            VAO = GL.GenVertexArray();
-            GL.BindVertexArray(VAO);
-
-            EBO = GL.GenBuffer();
-            GL.BindVertexArray(EBO);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
-
-            shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
-
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
-            GL.EnableVertexAttribArray(0);
+            board.Setup(ref vertices, ref indices, ref vbo, ref vao, ref ebo, ref shader);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs args)
@@ -57,14 +39,20 @@ namespace GameEngine
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
+            //float time = (float)args.Time;
+
+            Title = $"FPS: {1f / args.Time:0}";
 
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
             shader.Use();
 
-            GL.BindVertexArray(VAO);
+            var projection = Matrix4.CreateOrthographicOffCenter(0, 8, 0, 8, 0, 100);
+            shader.SetMatrix4("projection", projection);
 
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.BindVertexArray(vao);
+
+            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);
 
             SwapBuffers();
         }

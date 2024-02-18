@@ -8,12 +8,15 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using OpenTK.Mathematics;
 
 namespace GameEngine
 {
     public class Shader : IDisposable
     {
-        int handle;
+        readonly int handle;
+
+        private Dictionary<string, int> UniformLocations = new Dictionary<string, int>();
 
         public Shader(string vertexPath, string fragmentPath)
         {
@@ -62,11 +65,26 @@ namespace GameEngine
             GL.DetachShader(handle, vertexShader);
             GL.DeleteShader(fragmentShader);
             GL.DeleteShader(vertexShader);
+
+            GL.GetProgram(handle, GetProgramParameterName.ActiveUniforms, out int numUniforms);
+            for (int i = 0; i < numUniforms; i++)
+            {
+                string key = GL.GetActiveUniform(handle, i, out _, out _);
+                int id = GL.GetUniformLocation(handle, key);
+
+                UniformLocations.Add(key, id);
+            }
         }
 
         public void Use()
         {
             GL.UseProgram(handle);
+        }
+
+        public void SetMatrix4(string key, Matrix4 data)
+        {
+            GL.UseProgram(handle);
+            GL.UniformMatrix4(UniformLocations[key], true, ref data);
         }
 
         public void Dispose()

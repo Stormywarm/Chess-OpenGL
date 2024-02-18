@@ -1,72 +1,46 @@
 ﻿using System;
-
+using OpenTK.Graphics.OpenGL4;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
+using OpenTK.Mathematics;
 namespace GameEngine
 {
     public class Board
     {
-
-        struct Square
+        public void Setup(ref float[] vertices, ref uint[] indices, ref int vbo, ref int vao, ref int ebo, ref Shader shader)
         {
-            public float[] vertices;
-            public uint[] indices;
-
-            public float x;
-            public float y;
-        }
-
-        public VertexData GetVertexData()
-        {
-            int width = 1;
-            int height = 1;
-
-            Square[] squares = new Square[width * height]; 
-            /*
-            //Multiply by 3 to make room for x, y, z coordinates
-            float[] vertices = new float[(width + 1) * (height + 1) * 3];
-            float[] indices = new float[width * height * 6];
-            */
-            int triIndex = 0;
-            for (int y = 0; y < height; y++)
+            vertices = new float[]
             {
-                for (int x = 0; x < width; x++)
-                {
-                    int i = y * width + x;
+                0, 0, 0,
+                1, 0, 0,
+                0, 1, 0,
+                1, 1, 0
+            };
 
-                    squares[0].vertices = new float[]{
-                        -0.5f, -0.5f, 0,
-                        0.5f, -0.5f, 0,
-                        0.5f, 0.5f, 0,
-                        -0.5f, 0.5f, 0
-                    };
+            indices = new uint[]
+            {
+                0, 1, 2,
+                1, 2, 3
+            };
 
-                    squares[0].indices = new uint[]{
-                        0, 1, 3,
-                        1, 2, 3
-                    };
-                    /*
+            vbo = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
 
-                    vertices[i * 3 + 0] = x;
-                    vertices[i * 3 + 1] = y;
-                    vertices[i * 3 + 2] = 0;
+            vao = GL.GenVertexArray();
+            GL.BindVertexArray(vao);
 
-                    if (x < width && y < height)
-                    {
-                        indices[triIndex + 0] = i;
-                        indices[triIndex + 1] = i + 1;
-                        indices[triIndex + 2] = i + width;
-                        indices[triIndex + 3] = i + 1;
-                        indices[triIndex + 4] = i + width + 1;
-                        indices[triIndex + 5] = i + width;
-                        triIndex += 6;
-                    }
-                    */
-                }
-            }
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
+            GL.EnableVertexAttribArray(0);
 
-            return new VertexData(squares[0].vertices, squares[0].indices);
+            ebo = GL.GenBuffer();
+            GL.BindVertexArray(ebo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
 
+            shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
+            shader.Use();
         }
-
         public Board()
         {
         }

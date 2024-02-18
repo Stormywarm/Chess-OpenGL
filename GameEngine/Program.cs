@@ -3,7 +3,7 @@
     internal class Program
     {
         const int width = 800;
-        const int height = 600;
+        const int height = 800;
 
         static void Main(string[] args)
         {
