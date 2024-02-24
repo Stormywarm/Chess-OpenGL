@@ -87,6 +87,17 @@ namespace GameEngine
             GL.UniformMatrix4(UniformLocations[key], true, ref data);
         }
 
+        public void SetVector4(string key, Vector4 data)
+        {
+            GL.UseProgram(handle);
+            GL.Uniform4(UniformLocations[key], ref data);
+        }
+
+        public int GetAttribLocation(string key)
+        {
+            return GL.GetAttribLocation(handle, key);
+        }
+
         public void Dispose()
         {
             GL.DeleteProgram(handle);

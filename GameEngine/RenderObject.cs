@@ -2,33 +2,46 @@
 using OpenTK.Mathematics;
 
 namespace GameEngine
-{/*
-    public class RenderObject : IDisposable
+{
+    public class RenderObject
     {
-        public MeshData Mesh { get; }
-        public Vector4 Colour { get; }
-
         public Shader shader;
 
-        readonly float[] vertices;
-        readonly uint[] indices;
+        public Vector3 position;
 
-        int vao;
-        int vbo;
-        int ebo;
-
-        public RenderObject(MeshData mesh)
+        public uint[] indices = new uint[]
         {
-            Mesh = mesh;
-            //this.shader = shader;
+            0, 1, 2,
+            1, 2, 3
+        };
+        public float[] vertices = new float[]
+        {
+            0.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, 0.0f
+        };
 
-            vertices = mesh.vertices;
-            indices = mesh.indices;
+        public int vao;
+        public int vbo;
+        public int ebo;
+        
+        public RenderObject()
+        {
+        }
+        public RenderObject(MeshData mesh, Shader shader, Vector3 position)
+        {
+            this.shader = shader;
+
+            vertices = mesh.Vertices;
+            indices = mesh.Indices;
+
+            this.position = position; 
+            UpdatePosition();
         }
 
-        public void Setup(int id)
+        public virtual void Setup()
         {
-
             vbo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
@@ -36,50 +49,40 @@ namespace GameEngine
             vao = GL.GenVertexArray();
             GL.BindVertexArray(vao);
 
-            GL.VertexAttribPointer(id, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
-            GL.EnableVertexAttribArray(id);
+            int vertexLocation = shader.GetAttribLocation("vPos");
+            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
+            GL.EnableVertexAttribArray(vertexLocation);
 
             ebo = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
+            GL.BindVertexArray(ebo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
 
-            shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
             shader.Use();
         }
 
-        public void Render()
+        public virtual void Render()
         {
-
             shader.Use();
-            shader.SetVector4("colour", new Vector4(1, 0, 1, 1));
-            Matrix4 orthographicPerspective = Matrix4.CreateOrthographicOffCenter(0.0f, 8.0f, 0.0f, 8.0f, 0f, 100);
-            shader.SetMatrix4("projection", orthographicPerspective);
+
+            var projection = Matrix4.CreateOrthographicOffCenter(0, 8, 0, 8, 0, 100);
+            shader.SetMatrix4("projection", projection);
 
             GL.BindVertexArray(vao);
 
             GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);
-            /*
-            float[] vertices = mesh.vertices;
-            uint[] indices = mesh.indices;
-
-            VBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
-
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
-            GL.EnableVertexAttribArray(0);
-
-            EBO = GL.GenBuffer();
-            GL.BindVertexArray(EBO);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
-
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);*/
         }
-/*
-        public void Dispose()
+
+        public virtual void UpdatePosition()
         {
-            GL.DeleteVertexArray(vao);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                if (i % 3 == 0)
+                {
+                    vertices[i] += position.X;
+                    vertices[i + 1] += position.Y;
+                }
+            }
         }
     }
-}*/
+}
 
