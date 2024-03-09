@@ -31,21 +31,11 @@ namespace GameEngine
 
             GL.CompileShader(vertexShader);
 
-            GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out int success);
-            if (success == 0)
-            {
-                string infoLog = GL.GetShaderInfoLog(vertexShader);
-                Console.WriteLine(infoLog);
-            }
+            GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out _);
 
             GL.CompileShader(fragmentShader);
 
-            GL.GetShader(fragmentShader, ShaderParameter.CompileStatus, out int success1);
-            if (success1 == 0)
-            {
-                string infoLog = GL.GetShaderInfoLog(fragmentShader);
-                Console.WriteLine(infoLog);
-            }
+            GL.GetShader(fragmentShader, ShaderParameter.CompileStatus, out _);
 
             handle = GL.CreateProgram();
 
@@ -53,13 +43,7 @@ namespace GameEngine
             GL.AttachShader(handle, fragmentShader);
 
             GL.LinkProgram(handle);
-            GL.GetProgram(handle, GetProgramParameterName.LinkStatus, out int success2);
-            if (success2 == 0)
-            {
-                string infoLog = GL.GetProgramInfoLog(handle);
-                Console.WriteLine(infoLog);
-            }
-
+            GL.GetProgram(handle, GetProgramParameterName.LinkStatus, out _);
 
             GL.DetachShader(handle, fragmentShader);
             GL.DetachShader(handle, vertexShader);

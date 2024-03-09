@@ -9,39 +9,39 @@ namespace GameEngine
 
         public Vector3 position;
 
-        public uint[] indices = new uint[]
+        protected readonly Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, 8, 0, 8, 0, 100);
+
+        protected uint[] indices = new uint[]
         {
             0, 1, 2,
             1, 2, 3
         };
-        public float[] vertices = new float[]
+        protected float[] shape = new float[]
         {
-            0.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, 0.0f
+          //Vertices        //Texture Coords:
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 1.0f, 0.0f, 1.0f, 1.0f
         };
 
-        public int vao;
-        public int vbo;
-        public int ebo;
+        public float[] vertices;
+
+
+        protected int vao;
+        protected int vbo;
+        protected int ebo;
         
         public RenderObject()
         {
-        }
-        public RenderObject(MeshData mesh, Shader shader, Vector3 position)
-        {
-            this.shader = shader;
-
-            vertices = mesh.Vertices;
-            indices = mesh.Indices;
-
-            this.position = position; 
-            UpdatePosition();
+            vertices = new float[shape.Length];
+            Array.Copy(shape, vertices, vertices.Length);
         }
 
         public virtual void Setup()
         {
+            UpdatePosition();
+
             vbo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
@@ -50,12 +50,13 @@ namespace GameEngine
             GL.BindVertexArray(vao);
 
             int vertexLocation = shader.GetAttribLocation("vPos");
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, sizeof(float) * 3, 0);
+            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, sizeof(float) * 5, 0);
             GL.EnableVertexAttribArray(vertexLocation);
 
             ebo = GL.GenBuffer();
-            GL.BindVertexArray(ebo);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
             GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
 
             shader.Use();
         }
@@ -64,7 +65,6 @@ namespace GameEngine
         {
             shader.Use();
 
-            var projection = Matrix4.CreateOrthographicOffCenter(0, 8, 0, 8, 0, 100);
             shader.SetMatrix4("projection", projection);
 
             GL.BindVertexArray(vao);
@@ -76,10 +76,11 @@ namespace GameEngine
         {
             for (int i = 0; i < vertices.Length; i++)
             {
-                if (i % 3 == 0)
+                if (i % 5 == 0)
                 {
-                    vertices[i] += position.X;
-                    vertices[i + 1] += position.Y;
+                    vertices[i] = position.X + shape[i];
+                    vertices[i + 1] = position.Y + shape[i + 1];
+                    vertices[i + 2] = position.Z + shape[i + 2];
                 }
             }
         }

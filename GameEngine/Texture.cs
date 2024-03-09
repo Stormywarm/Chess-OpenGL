@@ -73,5 +73,10 @@ namespace GameEngine
         {
             GL.BindTexture(TextureTarget.Texture2D, handle);
         }
+
+        public void Unbind()
+        {
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+        }
     }
 }

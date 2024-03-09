@@ -14,6 +14,7 @@ namespace GameEngine
 {
     public class Piece : RenderObject
     {
+        public const int None = 0;
         public const int King = 1;
         public const int Queen = 2;
         public const int Bishop = 3;
@@ -24,41 +25,63 @@ namespace GameEngine
         public const int White = 8;
         public const int Black = 16;
 
-        readonly int pieceType;
+        public int PieceType { get; }
+        public int PieceTypeNoColour { get; }
+
+        public bool IsWhite { get; }
+
+        public readonly static Dictionary<int, char> pieceToChar = new Dictionary<int, char>()
+        {
+            { Piece.None,   '_' },
+            { Piece.Pawn,   'P' },
+            { Piece.King,   'K' },
+            { Piece.Queen,  'Q' },
+            { Piece.Rook,   'R' },
+            { Piece.Bishop, 'B' },
+            { Piece.Knight, 'N' }
+        };
 
         const string atlasPath = "Textures/PieceAtlas.png";
-        Texture texture;
 
-        public Piece(int pieceType, Vector3 position)
+        protected Texture texture;
+
+        public Piece(int pieceType)
         {
-            this.pieceType = pieceType;
+            vertices = new float[shape.Length];
+            Array.Copy(shape, vertices, vertices.Length);
 
-            vertices = new float[]
-            {
-              //Vertices        //Texture Coords:
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-                0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, 1.0f, 0.0f, 1.0f, 1.0f
-            };
-            indices = new uint[]
-            {
-                0, 1, 2,
-                1, 2, 3
-            };
+            PieceType = pieceType;
+            PieceTypeNoColour = pieceType & ~(Piece.White | Piece.Black);
 
-            this.position = position;
+            IsWhite = (PieceTypeNoColour | Piece.White) == pieceType;
 
             shader = new Shader("Shaders/Piece/shader.vert", "Shaders/Piece/shader.frag");
+        }
 
-            UpdatePosition();
+        public Piece(Piece piece)
+        {
+            vertices = piece.vertices;
+
+            PieceType = piece.PieceType;
+            PieceTypeNoColour = piece.PieceTypeNoColour;
+            IsWhite = piece.IsWhite;
+
+            texture = piece.texture;
+
+            shader = piece.shader;
+
+            vbo = piece.vbo;
+            vao = piece.vao;
+            ebo = piece.vbo;
         }
 
         public override void Setup()
         {
+            UpdatePosition();
+
             vbo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.DynamicDraw);
 
             vao = GL.GenVertexArray();
             GL.BindVertexArray(vao);
@@ -72,26 +95,33 @@ namespace GameEngine
             GL.EnableVertexAttribArray(texCoordLocation);
 
             ebo = GL.GenBuffer();
-            GL.BindVertexArray(ebo);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.DynamicDraw);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
 
             shader.Use();
 
-            texture = GetTextureFromPiece(pieceType);
+            texture = GetTextureFromPiece(PieceType);
             texture.Use();
+
+            texture.Unbind();
         }
 
         public override void Render()
         {
-            var projection = Matrix4.CreateOrthographicOffCenter(0, 8, 0, 8, 0, 100);
             shader.SetMatrix4("projection", projection);
 
             GL.BindVertexArray(vao);
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertices.Length, vertices, BufferUsageHint.DynamicDraw);
 
             shader.Use();
             texture.Use();
 
             GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);
+
+            texture.Unbind();
         }
 
         public override void UpdatePosition()
@@ -100,8 +130,9 @@ namespace GameEngine
             {
                 if (i % 5 == 0)
                 {
-                    vertices[i] += position.X;
-                    vertices[i + 1] += position.Y;
+                    vertices[i] = position.X + shape[i];
+                    vertices[i + 1] = position.Y + shape[i + 1];
+                    vertices[i + 2] = position.Z + shape[i + 2];
                 }
             }
         }
@@ -111,18 +142,9 @@ namespace GameEngine
             int x;
             int y;
 
-            if ((piece | Piece.White) == piece)
-            {
-                y = 0;
-            }
-            else
-            {
-                y = 1;
-            }
+            y = (piece | Piece.White) == piece ? 0 : 1;
 
-            // Unbelievably ugly code, will find a better way later
-            int pieceNoColour = (piece | Piece.White | Piece.Black) & ~(Piece.White | Piece.Black);
-            x = pieceNoColour - 1;
+            x = PieceTypeNoColour - 1;
 
             return new Texture(atlasPath, x, y, 6, 2);
         }
