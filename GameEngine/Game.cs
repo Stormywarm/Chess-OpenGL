@@ -10,7 +10,7 @@ namespace GameEngine
 {
     class Game : GameWindow
     {
-        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1) }){ }
+        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1), Flags = ContextFlags.ForwardCompatible }){ }
 
         private int quadvbo, quadvao;
 
@@ -118,7 +118,6 @@ namespace GameEngine
 
             framebuffer.Bind();
 
-            GL.Enable(EnableCap.DepthTest);
             GL.ClearColor(1, 1, 1, 1.0f);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -139,6 +138,8 @@ namespace GameEngine
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             RenderScreenQuad();
+
+            GL.Enable(EnableCap.DepthTest);
 
             SwapBuffers();
         }

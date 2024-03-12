@@ -50,8 +50,9 @@ namespace GameEngine
             GL.BindVertexArray(vao);
 
             int vertexLocation = shader.GetAttribLocation("vPos");
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, sizeof(float) * 5, 0);
-            GL.EnableVertexAttribArray(vertexLocation);
+            Console.WriteLine($"Square vertexloc: {vertexLocation}");
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 5, 0);
+            GL.EnableVertexAttribArray(0);
 
             ebo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
