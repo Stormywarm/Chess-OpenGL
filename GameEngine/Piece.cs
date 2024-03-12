@@ -87,13 +87,11 @@ namespace GameEngine
             GL.BindVertexArray(vao);
 
             int vertexLocation = shader.GetAttribLocation("vPos");
-            Console.WriteLine($"Piece vertexloc: {vertexLocation}");
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 5, 0);
+            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, sizeof(float) * 5, 0);
             GL.EnableVertexAttribArray(0);
 
             int texCoordLocation = shader.GetAttribLocation("aTexCoord");
-            Console.WriteLine($"Piece texCoordloc: {vertexLocation}");
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, sizeof(float) * 5, sizeof(float) * 3);
+            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, sizeof(float) * 5, sizeof(float) * 3);
             GL.EnableVertexAttribArray(1);
 
             ebo = GL.GenBuffer();

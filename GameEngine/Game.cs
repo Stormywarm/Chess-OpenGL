@@ -12,36 +12,14 @@ namespace GameEngine
     {
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1), Flags = ContextFlags.ForwardCompatible }){ }
 
-        private int quadvbo, quadvao;
-
-        Shader screenShader;
-
-        Framebuffer framebuffer;
-
         public Board board;
 
         Piece heldPiece;
         Square originSquare;
 
-        readonly float[] quadVertices = new float[]
-        {
-            -1.0f,  1.0f,  0.0f, 1.0f,
-            -1.0f, -1.0f,  0.0f, 0.0f,
-             1.0f, -1.0f,  1.0f, 0.0f,
-
-            -1.0f,  1.0f,  0.0f, 1.0f,
-             1.0f, -1.0f,  1.0f, 0.0f,
-             1.0f,  1.0f,  1.0f, 1.0f
-        };
-
         protected override void OnLoad()
         {
             base.OnLoad();
-
-            framebuffer = new Framebuffer(ClientSize.X, ClientSize.Y);
-            framebuffer.Bind();
-
-            SetupScreenQuad();
 
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.Blend);
@@ -53,7 +31,6 @@ namespace GameEngine
             board = new Board();
 
             board.Setup();
-            framebuffer.Unbind();
         }
 
         protected override void OnUpdateFrame(FrameEventArgs args)
@@ -116,8 +93,7 @@ namespace GameEngine
             base.OnRenderFrame(args);
             Title = $"FPS: {1f / args.Time:0}";
 
-            framebuffer.Bind();
-
+            GL.Enable(EnableCap.DepthTest);
             GL.ClearColor(1, 1, 1, 1.0f);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -132,15 +108,6 @@ namespace GameEngine
                 heldPiece.Render();
             }
 
-            framebuffer.Unbind();
-
-            GL.ClearColor(1, 1, 1, 1.0f);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-            RenderScreenQuad();
-
-            GL.Enable(EnableCap.DepthTest);
-
             SwapBuffers();
         }
 
@@ -148,7 +115,6 @@ namespace GameEngine
         {
             base.OnResize(e);
 
-            framebuffer = new Framebuffer(e.Width, e.Height);
             GL.Viewport(0, 0, e.Width, e.Height);
         }
 
@@ -175,42 +141,6 @@ namespace GameEngine
             Vector2 pos = GetCursorSquarePosition();
 
             return board.GetSquare(pos);
-        }
-
-        void SetupScreenQuad()
-        {
-            screenShader = new Shader("Shaders/Screen/shader.vert", "Shaders/Screen/shader.frag");
-
-            quadvbo = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, quadvbo);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * quadVertices.Length, quadVertices, BufferUsageHint.StaticDraw);
-
-            quadvao = GL.GenVertexArray();
-            GL.BindVertexArray(quadvao);
-
-            int vertexLocation = screenShader.GetAttribLocation("aPos");
-            GL.VertexAttribPointer(vertexLocation, 2, VertexAttribPointerType.Float, false, sizeof(float) * 4, 0);
-            GL.EnableVertexAttribArray(vertexLocation);
-
-            int texCoordLocation = screenShader.GetAttribLocation("aTexCoords");
-            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, sizeof(float) * 4, sizeof(float) * 2);
-            GL.EnableVertexAttribArray(texCoordLocation);
-
-            screenShader.Use();
-        }
-
-        void RenderScreenQuad()
-        {
-            screenShader.Use();
-            GL.BindVertexArray(quadvao); 
-
-            GL.Disable(EnableCap.DepthTest);
-
-            GL.BindTexture(TextureTarget.Texture2D, framebuffer.texture);
-
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
-
-            GL.BindTexture(TextureTarget.Texture2D, 0);
         }
     }
 }
