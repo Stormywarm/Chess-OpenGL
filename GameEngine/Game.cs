@@ -10,7 +10,7 @@ namespace GameEngine
 {
     class Game : GameWindow
     {
-        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title }){ }
+        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1) }){ }
 
         private int quadvbo, quadvao;
 
