@@ -56,7 +56,6 @@ namespace GameEngine
             ebo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
             GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.StaticDraw);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
 
             shader.Use();
         }
@@ -69,7 +68,7 @@ namespace GameEngine
 
             GL.BindVertexArray(vao);
 
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);
+            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
         }
 
         public virtual void UpdatePosition()

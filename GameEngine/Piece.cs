@@ -41,7 +41,7 @@ namespace GameEngine
             { Piece.Knight, 'N' }
         };
 
-        const string atlasPath = "Textures/PieceAtlas.png";
+        const string atlasPath = "Resources/Textures/PieceAtlas.png";
 
         protected Texture texture;
 
@@ -55,7 +55,7 @@ namespace GameEngine
 
             IsWhite = (PieceTypeNoColour | Piece.White) == pieceType;
 
-            shader = new Shader("Shaders/Piece/shader.vert", "Shaders/Piece/shader.frag");
+            shader = new Shader("Resources/Shaders/Piece/shader.vert", "Resources/Shaders/Piece/shader.frag");
         }
 
         public Piece(Piece piece)
@@ -97,7 +97,6 @@ namespace GameEngine
             ebo = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
             GL.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * indices.Length, indices, BufferUsageHint.DynamicDraw);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
 
             shader.Use();
 
@@ -119,7 +118,7 @@ namespace GameEngine
             shader.Use();
             texture.Use();
 
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, indices);
+            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
 
             texture.Unbind();
         }

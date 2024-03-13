@@ -70,7 +70,7 @@ namespace GameEngine
 
                     Vector4 colour = (x + y) % 2 == 0 ? blackColour : whiteColour;
 
-                    Shader shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
+                    Shader shader = new Shader("Resources/Shaders/shader.vert", "Resources/Shaders/shader.frag");
                     shader.SetVector4("colour", colour);
 
                     Square square = new Square(shader, new Vector3(x, y, 0));
