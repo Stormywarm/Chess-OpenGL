@@ -115,9 +115,8 @@ namespace GameEngine
         {
             base.OnResize(e);
 
-            //Commented out for mac compatibility
             //TODO: find a way to resize on mac
-            //GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
+            GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
         }
 
         Vector2 GetCursorBoardPosition()
