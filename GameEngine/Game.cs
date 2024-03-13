@@ -17,6 +17,8 @@ namespace GameEngine
         Piece heldPiece;
         Square originSquare;
 
+        bool isWhiteToMove = true;
+
         protected override void OnLoad()
         {
             base.OnLoad();
@@ -68,13 +70,7 @@ namespace GameEngine
 
                 Console.WriteLine(Convert.ToString((long)validMoveMask, 2) + ", " + Convert.ToString((long)destMask, 2));
 
-                if (isValidMove && canMoveToDest)
-                {
-                    board.MakeMove(move);
-                    Console.WriteLine($"Made move {(string)move}");
-                    Console.WriteLine($"Destination square now holds a {Piece.pieceToChar[destSquare.piece.PieceTypeNoColour]}");
-                }
-                else
+                if (!(isValidMove && canMoveToDest && board.TryMakeMove(move, ref isWhiteToMove)))
                 {
                     heldPiece.position = new Vector3(originSquare.position.X, originSquare.position.Y, -1);
                     heldPiece.UpdatePosition();
@@ -115,7 +111,7 @@ namespace GameEngine
         {
             base.OnResize(e);
 
-            //TODO: find a way to resize on mac
+            //TODO: find a way to resize on mac retina
             GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
         }
 

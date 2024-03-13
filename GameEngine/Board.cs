@@ -173,17 +173,28 @@ namespace GameEngine
             }
         }
         
-        public void MakeMove(Move move)
+        public bool TryMakeMove(Move move, ref bool isWhiteToMove)
         {
-            Square startSquare = GetSquare(move.StartCoord);
-            Square destSquare = GetSquare(move.DestCoord);
+            if (isWhiteToMove != squares[move.StartCoord.ToIndex()].piece.IsWhite)
+            {
+                return false;
+            }
+            else
+            {
+                Square startSquare = GetSquare(move.StartCoord);
+                Square destSquare = GetSquare(move.DestCoord);
 
-            destSquare.piece = new Piece(startSquare.piece);
+                destSquare.piece = new Piece(startSquare.piece);
 
-            destSquare.piece.position = new Vector3(destSquare.position.X, destSquare.position.Y, -1);
-            destSquare.piece.UpdatePosition();
+                destSquare.piece.position = new Vector3(destSquare.position.X, destSquare.position.Y, -1);
+                destSquare.piece.UpdatePosition();
 
-            startSquare.piece = new Piece(Piece.None);
+                startSquare.piece = new Piece(Piece.None);
+
+                isWhiteToMove = !isWhiteToMove;
+
+                return true;
+            }
         }
         
         public ulong GetMovesBitboard(Square square)
@@ -204,7 +215,7 @@ namespace GameEngine
             };
         }
 
-        static ulong GetOrthogonalMoves(Square square)
+        ulong GetOrthogonalMoves(Square square)
         {
             ulong validSquaresMask = 0;
 
@@ -214,27 +225,39 @@ namespace GameEngine
                 
                 for (int i = 0; i < 8; i++)
                 {
+                    coord += dir;
                     if (!coord.IsValidSquare())
                     {
                         break;
                     }
 
-                    coord += dir;
-                    validSquaresMask |= coord.ToBitBoard();
+                    Square targetSquare = squares[coord.file + coord.rank * Width];
 
-                    if (square.piece.PieceTypeNoColour == Piece.King)
+                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
+                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
+
+                    if (isCapture)
+                    {
+                        validSquaresMask |= coord.ToBitBoard();
+                        break;
+                    }
+
+                    if (!canContinue)
                     {
                         break;
                     }
+
+                    validSquaresMask |= coord.ToBitBoard();
                 }
             }
 
             return validSquaresMask | square.coord.ToBitBoard();
         }
 
-        static ulong GetDiagonalMoves(Square square)
+        ulong GetDiagonalMoves(Square square)
         {
             ulong validSquaresMask = 0;
+
 
             foreach (Coord dir in DiagonalOffsets)
             {
@@ -242,18 +265,29 @@ namespace GameEngine
 
                 for (int i = 0; i < 8; i++)
                 {
+                    coord += dir;
                     if (!coord.IsValidSquare())
                     {
                         break;
                     }
 
-                    coord += dir;
-                    validSquaresMask |= coord.ToBitBoard();
+                    Square targetSquare = squares[coord.file + coord.rank * Width];
 
-                    if (square.piece.PieceTypeNoColour == Piece.King)
+                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
+                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
+
+                    if (isCapture)
+                    {
+                        validSquaresMask |= coord.ToBitBoard();
+                        break;
+                    }
+
+                    if (!canContinue)
                     {
                         break;
                     }
+
+                    validSquaresMask |= coord.ToBitBoard();
                 }
             }
 
@@ -263,9 +297,6 @@ namespace GameEngine
         static ulong GetKnightMoves(Square square)
         {
             ulong validSquaresMask = 0;
-
-            if (square.piece.PieceType == Piece.None)
-                return validSquaresMask;
 
             foreach (Coord dir in KnightOffsets)
             {
@@ -282,6 +313,9 @@ namespace GameEngine
             return validSquaresMask;
         }
 
+        //TODO: Definitely needs refactoring.
+        //Perhaps compare to a bitboard of all pieces
+        //instead of comparing to the squares directly?
         ulong GetPawnMoves(Square square)
         {
             ulong validSquaresMask = 0;
@@ -302,9 +336,13 @@ namespace GameEngine
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (square.coord.rank == Height - 7)
+                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
                     {
-                        validSquaresMask |= doublePawnMove.ToBitBoard();
+                        if ((square.coord.rank == Height - 7) && squares[doublePawnMove.ToIndex()].IsEmpty())
+                        {
+                            validSquaresMask |= doublePawnMove.ToBitBoard();
+                        }
+                        validSquaresMask |= singlePawnMove.ToBitBoard();
                     }
 
                     if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
@@ -317,7 +355,6 @@ namespace GameEngine
                     }
                     Console.WriteLine(squares[rightCaptureMove.ToIndex()].piece.PieceType);
 
-                    validSquaresMask |= singlePawnMove.ToBitBoard();
                 }
             } else
             {
@@ -329,9 +366,13 @@ namespace GameEngine
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (square.coord.rank == Height - 2)
+                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
                     {
-                        validSquaresMask |= doublePawnMove.ToBitBoard();
+                        if ((square.coord.rank == Height - 2) && squares[doublePawnMove.ToIndex()].IsEmpty())
+                        {
+                            validSquaresMask |= doublePawnMove.ToBitBoard();
+                        }
+                        validSquaresMask |= singlePawnMove.ToBitBoard();
                     }
 
                     if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
@@ -342,7 +383,6 @@ namespace GameEngine
                     {
                         validSquaresMask |= rightCaptureMove.ToBitBoard();
                     }
-                    validSquaresMask |= singlePawnMove.ToBitBoard();
                 }
             }
 
@@ -356,8 +396,6 @@ namespace GameEngine
             //King logic
 
 
-            validSquaresMask |= GetOrthogonalMoves(square);
-            validSquaresMask |= GetDiagonalMoves(square);
 
             return validSquaresMask | square.coord.ToBitBoard();
         }
