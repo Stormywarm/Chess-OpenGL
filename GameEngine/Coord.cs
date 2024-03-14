@@ -31,17 +31,17 @@ namespace GameEngine
 
         public bool IsValidSquare()
         {
-            return file >= 0 && file < Board.Width && rank >= 0 && rank < Board.Height;
+            return file >= 0 && file < Board.WIDTH && rank >= 0 && rank < Board.HEIGHT;
         }
 
         public int ToIndex()
         {
-            return file + rank * Board.Width;
+            return file + rank * Board.WIDTH;
         }
 
         public ulong ToBitBoard()
         {
-            int index = file + rank * Board.Width;
+            int index = file + rank * Board.WIDTH;
             return (ulong)1 << index;
         }
 

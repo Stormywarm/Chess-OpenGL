@@ -4,39 +4,18 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Mathematics;
+using GameEngine.BitboardUtil;
 namespace GameEngine
 {
     public class Board
     {
-        public readonly static int Width = 8;
-        public readonly static int Height = 8;
+        public const int WIDTH = 8;
+        public const int HEIGHT = 8;
 
         public Square[] squares;
 
         static readonly Vector4 blackColour = new Vector4(0.44f, 0.5f, 0.56f, 1.0f);
         static readonly Vector4 whiteColour = new Vector4(0.78f, 0.78f, 0.78f, 1.0f);
-
-        public static readonly Coord[] OrthogonalOffsets = { 
-            new Coord(1, 0), new Coord(-1, 0),
-            new Coord(0, 1), new Coord(0, -1)
-        };
-        public static readonly Coord[] DiagonalOffsets = { 
-            new Coord(1, 1), new Coord(-1, -1),
-            new Coord(1, -1), new Coord(-1, 1)
-        };
-        public static readonly Coord[] KnightOffsets = {
-            new Coord(1, 2), new Coord(-1, 2),
-            new Coord(2, 1), new Coord(2, -1),
-            new Coord(1, -2), new Coord(-1, -2),
-            new Coord(-2, 1), new Coord(-2, -1)
-        };
-
-        static readonly Coord singlePawnOffset = new Coord(0, 1);
-        static readonly Coord doublePawnOffset = new Coord(0, 2);
-
-        static readonly Coord captureLeftOffset = new Coord(-1, 1);
-        static readonly Coord captureRightOffset = new Coord(1, 1);
-
 
         public readonly static Dictionary<char, int> charToPiece = new Dictionary<char, int>()
         {
@@ -57,20 +36,20 @@ namespace GameEngine
 
         public Board()
         {
-            squares = new Square[Width * Height];
+            squares = new Square[WIDTH * HEIGHT];
 
             Piece[,] pieces = LoadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
 
-            for (int y = 0; y < Height; y++)
+            for (int y = 0; y < HEIGHT; y++)
             {
-                for (int x = 0; x < Width; x++)
+                for (int x = 0; x < WIDTH; x++)
                 {
-                    int i = x + y * Width;
+                    int i = x + y * WIDTH;
 
                     Vector4 colour = (x + y) % 2 == 0 ? blackColour : whiteColour;
 
-                    Shader shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
+                    Shader shader = new Shader("Resources/Shaders/shader.vert", "Resources/Shaders/shader.frag");
                     shader.SetVector4("colour", colour);
 
                     Square square = new Square(shader, new Vector3(x, y, 0));
@@ -83,29 +62,29 @@ namespace GameEngine
 
         public ref Square GetSquare(Vector2 coord)
         {
-            int i = (int)coord.X + (int)coord.Y * Width;
+            int i = (int)coord.X + (int)coord.Y * WIDTH;
             return ref squares[i];
         }
 
         public ref Square GetSquare(int x, int y)
         {
-            int i = x + y * Width;
+            int i = x + y * WIDTH;
             return ref squares[i];
         }
 
         public ref Square GetSquare(Coord coord)
         {
-            int i = coord.file + coord.rank * Width;
+            int i = coord.file + coord.rank * WIDTH;
             return ref squares[i];
         }
 
         public Piece[,] LoadFEN(string fen)
         {
-            Piece[,] pieceArray = new Piece[Width, Height];
+            Piece[,] pieceArray = new Piece[WIDTH, HEIGHT];
 
-            for (int y = 0; y < Height; y++)
+            for (int y = 0; y < HEIGHT; y++)
             {
-                for (int x = 0; x < Width; x++)
+                for (int x = 0; x < WIDTH; x++)
                 {
                     pieceArray[x, y] = new Piece(Piece.None);
                 }
@@ -129,7 +108,7 @@ namespace GameEngine
                     }
                     else
                     {
-                        pieceArray[x, Height - 1 - rank] = new Piece(charToPiece[pieceKeys[file]]);
+                        pieceArray[x, HEIGHT - 1 - rank] = new Piece(charToPiece[pieceKeys[file]]);
                     }
                     x++;
                 }
@@ -173,13 +152,9 @@ namespace GameEngine
             }
         }
         
-        public bool TryMakeMove(Move move, ref bool isWhiteToMove)
+        public bool TryMakeMove(Move move, ref bool isWhiteToMove, ref BitboardManager bitboard)
         {
-            if (isWhiteToMove != squares[move.StartCoord.ToIndex()].piece.IsWhite)
-            {
-                return false;
-            }
-            else
+            if (isWhiteToMove == squares[move.StartCoord.ToIndex()].piece.IsWhite)
             {
                 Square startSquare = GetSquare(move.StartCoord);
                 Square destSquare = GetSquare(move.DestCoord);
@@ -193,213 +168,15 @@ namespace GameEngine
 
                 isWhiteToMove = !isWhiteToMove;
 
+                bitboard.UpdateSquares(squares);
+
                 return true;
             }
+
+            return false;
         }
         
-        public ulong GetMovesBitboard(Square square)
-        {
-            ulong moves = 0;
-
-            int piece = square.piece.PieceTypeNoColour;
-
-            return piece switch
-            {
-                Piece.Pawn => GetPawnMoves(square),
-                Piece.Rook => GetOrthogonalMoves(square),
-                Piece.Bishop => GetDiagonalMoves(square),
-                Piece.Knight => GetKnightMoves(square),
-                Piece.Queen => GetOrthogonalMoves(square) | GetDiagonalMoves(square),
-                Piece.King => GetKingMoves(square),
-                _ => moves
-            };
-        }
-
-        ulong GetOrthogonalMoves(Square square)
-        {
-            ulong validSquaresMask = 0;
-
-            foreach (Coord dir in OrthogonalOffsets)
-            {
-                Coord coord = square.coord;
-                
-                for (int i = 0; i < 8; i++)
-                {
-                    coord += dir;
-                    if (!coord.IsValidSquare())
-                    {
-                        break;
-                    }
-
-                    Square targetSquare = squares[coord.file + coord.rank * Width];
-
-                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
-                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
-
-                    if (isCapture)
-                    {
-                        validSquaresMask |= coord.ToBitBoard();
-                        break;
-                    }
-
-                    if (!canContinue)
-                    {
-                        break;
-                    }
-
-                    validSquaresMask |= coord.ToBitBoard();
-                }
-            }
-
-            return validSquaresMask | square.coord.ToBitBoard();
-        }
-
-        ulong GetDiagonalMoves(Square square)
-        {
-            ulong validSquaresMask = 0;
-
-
-            foreach (Coord dir in DiagonalOffsets)
-            {
-                Coord coord = square.coord;
-
-                for (int i = 0; i < 8; i++)
-                {
-                    coord += dir;
-                    if (!coord.IsValidSquare())
-                    {
-                        break;
-                    }
-
-                    Square targetSquare = squares[coord.file + coord.rank * Width];
-
-                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
-                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
-
-                    if (isCapture)
-                    {
-                        validSquaresMask |= coord.ToBitBoard();
-                        break;
-                    }
-
-                    if (!canContinue)
-                    {
-                        break;
-                    }
-
-                    validSquaresMask |= coord.ToBitBoard();
-                }
-            }
-
-            return validSquaresMask | square.coord.ToBitBoard();
-        }
         
-        static ulong GetKnightMoves(Square square)
-        {
-            ulong validSquaresMask = 0;
-
-            foreach (Coord dir in KnightOffsets)
-            {
-                Coord coord = square.coord + dir;
-
-                if (!coord.IsValidSquare())
-                {
-                    continue;
-                }
-
-                validSquaresMask |= coord.ToBitBoard();
-            }
-
-            return validSquaresMask;
-        }
-
-        //TODO: Definitely needs refactoring.
-        //Perhaps compare to a bitboard of all pieces
-        //instead of comparing to the squares directly?
-        ulong GetPawnMoves(Square square)
-        {
-            ulong validSquaresMask = 0;
-
-            Piece piece = square.piece;
-
-
-            if (piece.PieceType == Piece.None)
-                return validSquaresMask;
-
-            if (piece.IsWhite)
-            {   
-                Coord singlePawnMove = square.coord + singlePawnOffset;
-                Coord doublePawnMove = square.coord + doublePawnOffset;
-
-                Coord leftCaptureMove = square.coord + captureLeftOffset;
-                Coord rightCaptureMove = square.coord + captureRightOffset;
-
-                if (singlePawnMove.IsValidSquare())
-                {
-                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
-                    {
-                        if ((square.coord.rank == Height - 7) && squares[doublePawnMove.ToIndex()].IsEmpty())
-                        {
-                            validSquaresMask |= doublePawnMove.ToBitBoard();
-                        }
-                        validSquaresMask |= singlePawnMove.ToBitBoard();
-                    }
-
-                    if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= leftCaptureMove.ToBitBoard();
-                    }
-                    if (!squares[rightCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= rightCaptureMove.ToBitBoard();
-                    }
-                    Console.WriteLine(squares[rightCaptureMove.ToIndex()].piece.PieceType);
-
-                }
-            } else
-            {
-                Coord singlePawnMove = square.coord - singlePawnOffset;
-                Coord doublePawnMove = square.coord - doublePawnOffset;
-
-                Coord leftCaptureMove = square.coord - captureRightOffset;
-                Coord rightCaptureMove = square.coord - captureLeftOffset;
-
-                if (singlePawnMove.IsValidSquare())
-                {
-                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
-                    {
-                        if ((square.coord.rank == Height - 2) && squares[doublePawnMove.ToIndex()].IsEmpty())
-                        {
-                            validSquaresMask |= doublePawnMove.ToBitBoard();
-                        }
-                        validSquaresMask |= singlePawnMove.ToBitBoard();
-                    }
-
-                    if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= leftCaptureMove.ToBitBoard();
-                    }
-                    if (!squares[rightCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= rightCaptureMove.ToBitBoard();
-                    }
-                }
-            }
-
-            return validSquaresMask;
-        }
-
-        ulong GetKingMoves(Square square)
-        {
-            ulong validSquaresMask = 0;
-
-            //King logic
-
-
-
-            return validSquaresMask | square.coord.ToBitBoard();
-        }
-
         void CastleShort()
         {
 

@@ -6,6 +6,8 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Mathematics;
 
+using GameEngine.BitboardUtil;
+
 namespace GameEngine
 {
     class Game : GameWindow
@@ -13,6 +15,8 @@ namespace GameEngine
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1), Flags = ContextFlags.ForwardCompatible }){ }
 
         public Board board;
+        
+        BitboardManager bitboard;
 
         Piece heldPiece;
         Square originSquare;
@@ -31,8 +35,9 @@ namespace GameEngine
             GL.ClearColor(0.03f, 0.0f, 0.09f, 1.0f);
 
             board = new Board();
-
             board.Setup();
+
+            bitboard = new BitboardManager(board.squares);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs args)
@@ -61,20 +66,21 @@ namespace GameEngine
                 Square destSquare = GetSelectedSquare();
                 Move move = new Move(originSquare.coord, destSquare.coord);
 
-                ulong validMoveMask = board.GetMovesBitboard(originSquare);
+                ulong validMoveMask = bitboard.GetMovesBitboard(originSquare);
 
                 ulong destMask = destSquare.coord.ToBitBoard();
 
                 bool canMoveToDest = (validMoveMask | destMask) == validMoveMask;
                 bool isValidMove = originSquare != destSquare;
 
-                Console.WriteLine(Convert.ToString((long)validMoveMask, 2) + ", " + Convert.ToString((long)destMask, 2));
-
-                if (!(isValidMove && canMoveToDest && board.TryMakeMove(move, ref isWhiteToMove)))
+                if (!(isValidMove && canMoveToDest && board.TryMakeMove(move, ref isWhiteToMove, ref bitboard)))
                 {
                     heldPiece.position = new Vector3(originSquare.position.X, originSquare.position.Y, -1);
                     heldPiece.UpdatePosition();
                     heldPiece = new Piece(Piece.None);
+
+                    Console.WriteLine(BitboardManager.PrintBitboard(validMoveMask));
+                    Console.WriteLine(BitboardManager.PrintBitboard(isWhiteToMove ? bitboard.GetWhitePiecesBitboard() : bitboard.GetBlackPiecesBitboard()));
                 }
             }
 

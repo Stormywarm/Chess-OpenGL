@@ -41,7 +41,7 @@ namespace GameEngine
             { Piece.Knight, 'N' }
         };
 
-        const string atlasPath = "Textures/PieceAtlas.png";
+        const string atlasPath = "Resources/Textures/PieceAtlas.png";
 
         protected Texture texture;
 
@@ -55,7 +55,7 @@ namespace GameEngine
 
             IsWhite = (PieceTypeNoColour | Piece.White) == pieceType;
 
-            shader = new Shader("Shaders/Piece/shader.vert", "Shaders/Piece/shader.frag");
+            shader = new Shader("Resources/Shaders/Piece/shader.vert", "Resources/Shaders/Piece/shader.frag");
         }
 
         public Piece(Piece piece)
