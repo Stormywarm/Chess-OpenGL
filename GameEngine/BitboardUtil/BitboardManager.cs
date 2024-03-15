@@ -114,7 +114,7 @@ namespace GameEngine.BitboardUtil
                 }
             }
 
-            return validSquaresMask | square.coord.ToBitBoard();
+            return validSquaresMask;
         }
 
         ulong GetDiagonalMoves(Square square)
@@ -154,7 +154,7 @@ namespace GameEngine.BitboardUtil
                 }
             }
 
-            return validSquaresMask | square.coord.ToBitBoard();
+            return validSquaresMask;
         }
         
         ulong GetKnightMoves(Square square)
@@ -172,7 +172,8 @@ namespace GameEngine.BitboardUtil
 
                 validSquaresMask |= coord.ToBitBoard();
             }
-
+            PrintBitboard(validSquaresMask);
+            validSquaresMask &= ~(square.piece.IsWhite ? GetWhitePiecesBitboard() : GetBlackPiecesBitboard());
             return validSquaresMask;
         }
 
@@ -181,13 +182,14 @@ namespace GameEngine.BitboardUtil
         //instead of comparing to the squares directly?
         ulong GetPawnMoves(Square square)
         {
-            ulong validSquaresMask = 0;
+            ulong validMoveMask = 0;
+            ulong validCaptureMask = 0;
 
             Piece piece = square.piece;
 
 
             if (piece.PieceType == Piece.None)
-                return validSquaresMask;
+                return validMoveMask;
 
             if (piece.IsWhite)
             {   
@@ -199,24 +201,15 @@ namespace GameEngine.BitboardUtil
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
+                    if (square.coord.rank == HEIGHT - 7)
                     {
-                        if ((square.coord.rank == HEIGHT - 7) && squares[doublePawnMove.ToIndex()].IsEmpty())
-                        {
-                            validSquaresMask |= doublePawnMove.ToBitBoard();
-                        }
-                        validSquaresMask |= singlePawnMove.ToBitBoard();
+                        validMoveMask |= doublePawnMove.ToBitBoard();
                     }
 
-                    if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= leftCaptureMove.ToBitBoard();
-                    }
-                    if (!squares[rightCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= rightCaptureMove.ToBitBoard();
-                    }
+                    validMoveMask |= singlePawnMove.ToBitBoard();
 
+                    validCaptureMask |= leftCaptureMove.ToBitBoard();
+                    validCaptureMask |= rightCaptureMove.ToBitBoard();
                 }
             } else
             {
@@ -228,27 +221,19 @@ namespace GameEngine.BitboardUtil
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (squares[singlePawnMove.ToIndex()].IsEmpty())
+                    if (square.coord.rank == HEIGHT - 2)
                     {
-                        if ((square.coord.rank == HEIGHT - 2) && squares[doublePawnMove.ToIndex()].IsEmpty())
-                        {
-                            validSquaresMask |= doublePawnMove.ToBitBoard();
-                        }
-                        validSquaresMask |= singlePawnMove.ToBitBoard();
+                        validMoveMask |= doublePawnMove.ToBitBoard();
                     }
-
-                    if (!squares[leftCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= leftCaptureMove.ToBitBoard();
-                    }
-                    if (!squares[rightCaptureMove.ToIndex()].IsEmpty())
-                    {
-                        validSquaresMask |= rightCaptureMove.ToBitBoard();
-                    }
+                    validMoveMask |= singlePawnMove.ToBitBoard();
+                    
+                    validCaptureMask |= leftCaptureMove.ToBitBoard();
+                    validCaptureMask |= rightCaptureMove.ToBitBoard();
                 }
             }
+            validCaptureMask &= piece.IsWhite ? GetBlackPiecesBitboard() : GetWhitePiecesBitboard();
 
-            return validSquaresMask;
+            return validMoveMask | validCaptureMask;
         }
 
         ulong GetKingMoves(Square square)
@@ -262,6 +247,10 @@ namespace GameEngine.BitboardUtil
             return validSquaresMask | square.coord.ToBitBoard();
         }
 
+        public static bool Contains(ulong x, ulong y) {
+            return (x | y) == x;
+        }
+        
         public static string PrintBitboard(ulong bitboard) {
             string bitboardString = "";
 

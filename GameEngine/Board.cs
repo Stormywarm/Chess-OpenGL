@@ -154,7 +154,12 @@ namespace GameEngine
         
         public bool TryMakeMove(Move move, ref bool isWhiteToMove, ref BitboardManager bitboard)
         {
-            if (isWhiteToMove == squares[move.StartCoord.ToIndex()].piece.IsWhite)
+            ulong validMovesBitboard = bitboard.GetMovesBitboard(squares[move.StartCoord.ToIndex()]);
+
+            bool isSideToMove = isWhiteToMove == squares[move.StartCoord.ToIndex()].piece.IsWhite;
+            bool isValidMove  = BitboardManager.Contains(validMovesBitboard, move.DestCoord.ToBitBoard()); 
+
+            if (isSideToMove && isValidMove)
             {
                 Square startSquare = GetSquare(move.StartCoord);
                 Square destSquare = GetSquare(move.DestCoord);

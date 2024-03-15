@@ -51,8 +51,10 @@ namespace GameEngine
 
             if (MouseState.IsButtonPressed(MouseButton.Left))
             {
-                heldPiece = GetSelectedSquare().piece;
-                originSquare = GetSelectedSquare();
+                if (GetCursorCoord().IsValidSquare()) {
+                    originSquare = board.GetSquare(GetCursorCoord());
+                    heldPiece = originSquare.piece;
+                }
             }
 
             if (MouseState.IsButtonDown(MouseButton.Left))
@@ -61,26 +63,19 @@ namespace GameEngine
                 heldPiece.UpdatePosition();
             }
 
-            if (MouseState.IsButtonReleased(MouseButton.Left) && heldPiece.PieceType != Piece.None)
+            if (MouseState.IsButtonReleased(MouseButton.Left) && (heldPiece.PieceType != Piece.None))
             {
-                Square destSquare = GetSelectedSquare();
-                Move move = new Move(originSquare.coord, destSquare.coord);
-
-                ulong validMoveMask = bitboard.GetMovesBitboard(originSquare);
-
-                ulong destMask = destSquare.coord.ToBitBoard();
-
-                bool canMoveToDest = (validMoveMask | destMask) == validMoveMask;
-                bool isValidMove = originSquare != destSquare;
-
-                if (!(isValidMove && canMoveToDest && board.TryMakeMove(move, ref isWhiteToMove, ref bitboard)))
+                if (GetCursorCoord().IsValidSquare())
                 {
-                    heldPiece.position = new Vector3(originSquare.position.X, originSquare.position.Y, -1);
-                    heldPiece.UpdatePosition();
-                    heldPiece = new Piece(Piece.None);
+                    Square destSquare = board.GetSquare(GetCursorCoord());
+                    Move move = new Move(originSquare.coord, destSquare.coord);
 
-                    Console.WriteLine(BitboardManager.PrintBitboard(validMoveMask));
-                    Console.WriteLine(BitboardManager.PrintBitboard(isWhiteToMove ? bitboard.GetWhitePiecesBitboard() : bitboard.GetBlackPiecesBitboard()));
+                    if(!board.TryMakeMove(move, ref isWhiteToMove, ref bitboard))
+                    {
+                        ReleasePiece();
+                    }
+                } else {
+                    ReleasePiece();
                 }
             }
 
@@ -134,16 +129,17 @@ namespace GameEngine
             return cursorBoardPos;
         }
 
-        Vector2 GetCursorSquarePosition()
+        Coord GetCursorCoord()
         {
-            return new Vector2((int)GetCursorBoardPosition().X, (int)Math.Floor(GetCursorBoardPosition().Y));
+            Vector2 pos = new Vector2((int)GetCursorBoardPosition().X, (int)Math.Floor(GetCursorBoardPosition().Y));
+            return new Coord(pos);
         }
 
-        Square GetSelectedSquare()
+        void ReleasePiece()
         {
-            Vector2 pos = GetCursorSquarePosition();
-
-            return board.GetSquare(pos);
+            heldPiece.position = new Vector3(originSquare.position.X, originSquare.position.Y, -1);
+            heldPiece.UpdatePosition();
+            heldPiece = new Piece(Piece.None);
         }
     }
 }
