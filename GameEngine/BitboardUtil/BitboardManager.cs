@@ -5,10 +5,6 @@ namespace GameEngine.BitboardUtil
         const int WIDTH = Board.WIDTH;
         const int HEIGHT = Board.HEIGHT;
 
-        ulong allPiecesBitBoard;
-        ulong whitePiecesBitBoard;
-        ulong blackPiecesBitBoard;
-
         Square[] squares;
 
         public BitboardManager (Square[] squares) {
@@ -34,11 +30,14 @@ namespace GameEngine.BitboardUtil
             new Coord(-2, 1), new Coord(-2, -1)
         };
 
-        static readonly Coord singlePawnOffset = new Coord(0, 1);
-        static readonly Coord doublePawnOffset = new Coord(0, 2);
+        public static readonly Coord singlePawnOffset = new Coord(0, 1);
+        public static readonly Coord doublePawnOffset = new Coord(0, 2);
 
-        static readonly Coord captureLeftOffset = new Coord(-1, 1);
-        static readonly Coord captureRightOffset = new Coord(1, 1);
+        public static readonly Coord captureLeftOffset = new Coord(-1, 1);
+        public static readonly Coord captureRightOffset = new Coord(1, 1);
+
+        public static readonly Coord leftOffset = new Coord(-1, 0);
+        public static readonly Coord rightOffset = new Coord(1, 0);
 
         public ulong GetMovesBitboard(Square square)
         {
@@ -46,21 +45,22 @@ namespace GameEngine.BitboardUtil
 
             int piece = square.piece.PieceTypeNoColour;
 
+            ulong blockingPiecesMask = square.piece.IsWhite ? ~GetWhitePiecesBitboard() : ~GetBlackPiecesBitboard();
+            ulong captureablePiecesMask = square.piece.IsWhite ? GetBlackPiecesBitboard() : GetWhitePiecesBitboard();
+
             return piece switch
             {
-                Piece.Pawn => GetPawnMoves(square),
-                Piece.Rook => GetOrthogonalMoves(square),
-                Piece.Bishop => GetDiagonalMoves(square),
-                Piece.Knight => GetKnightMoves(square),
-                Piece.Queen => GetOrthogonalMoves(square) | GetDiagonalMoves(square),
-                Piece.King => GetKingMoves(square),
+                Piece.Pawn => (GetPawnMoves(square) & blockingPiecesMask) | (GetPawnAttacks(square) & captureablePiecesMask),
+                Piece.Rook => GetOrthogonalMoves(square) & blockingPiecesMask,
+                Piece.Bishop => GetDiagonalMoves(square) & blockingPiecesMask,
+                Piece.Knight => GetKnightMoves(square) & blockingPiecesMask,
+                Piece.Queen => (GetOrthogonalMoves(square) | GetDiagonalMoves(square)) & blockingPiecesMask,
+                Piece.King => GetKingMoves(square) & blockingPiecesMask,
                 _ => moves
             };
         }
 
-        public ulong GetPiecesBitboard () {
-            return GetWhitePiecesBitboard() | GetBlackPiecesBitboard(); 
-        }
+        public ulong GetPiecesBitboard() => GetWhitePiecesBitboard() | GetBlackPiecesBitboard();
 
         public ulong GetWhitePiecesBitboard () {
             ulong bitboard = 0;
@@ -78,6 +78,51 @@ namespace GameEngine.BitboardUtil
             return bitboard;
         }
 
+        ulong GetAllAttacks(bool isWhite)
+        {
+            ulong attackedSquaresBitboard = 0;
+
+            foreach(Square square in squares)
+            {
+                if (square.IsEmpty() || (square.piece.IsWhite != isWhite))
+                {
+                    continue;
+                } else
+                {
+                    switch (square.piece.PieceTypeNoColour)
+                    {
+                        case Piece.King:
+                            attackedSquaresBitboard |= GetKingMovesNoChecks(square);
+                            break;
+
+                        case Piece.Pawn:
+                            attackedSquaresBitboard |= GetPawnAttacks(square);
+                            break;
+
+                        case Piece.Queen:
+                            attackedSquaresBitboard |= (GetOrthogonalMoves(square) | GetDiagonalMoves(square));
+                            break;
+
+                        case Piece.Rook:
+                            attackedSquaresBitboard |= GetOrthogonalMoves(square);
+                            break;
+
+                        case Piece.Bishop:
+                            attackedSquaresBitboard |= GetDiagonalMoves(square);
+                            break;
+
+                        case Piece.Knight:
+                            attackedSquaresBitboard |= GetKnightMoves(square);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            Console.WriteLine(PrintBitboard(attackedSquaresBitboard));
+            return attackedSquaresBitboard;
+        }
+
         ulong GetOrthogonalMoves(Square square)
         {
             ulong validSquaresMask = 0;
@@ -85,7 +130,7 @@ namespace GameEngine.BitboardUtil
             foreach (Coord dir in OrthogonalOffsets)
             {
                 Coord coord = square.coord;
-                
+
                 for (int i = 0; i < 8; i++)
                 {
                     coord += dir;
@@ -96,17 +141,15 @@ namespace GameEngine.BitboardUtil
 
                     Square targetSquare = squares[coord.file + coord.rank * WIDTH];
 
-                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
-                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
+                    bool canContinue = targetSquare.IsEmpty();
 
-                    if (isCapture)
-                    {
-                        validSquaresMask |= coord.ToBitBoard();
-                        break;
-                    }
-
+                    //Add the currently target move to the list of valid squares,
+                    //even if the piece is the same colour as the piece.
+                    //This is so that we can test if a piece is defended
+                    //when calculating king moves
                     if (!canContinue)
                     {
+                        validSquaresMask |= coord.ToBitBoard();
                         break;
                     }
 
@@ -120,7 +163,6 @@ namespace GameEngine.BitboardUtil
         ulong GetDiagonalMoves(Square square)
         {
             ulong validSquaresMask = 0;
-
 
             foreach (Coord dir in DiagonalOffsets)
             {
@@ -136,24 +178,25 @@ namespace GameEngine.BitboardUtil
 
                     Square targetSquare = squares[coord.file + coord.rank * WIDTH];
 
-                    bool canContinue = targetSquare.IsEmpty() || targetSquare == square;
-                    bool isCapture = (targetSquare.piece.IsWhite == !square.piece.IsWhite) && !targetSquare.IsEmpty();
+                    //Continue adding moves through the opposite coloured king,
+                    //so that the king cannot get out of check by simply
+                    //taking a step back.
+                    int oppositeColouredKing = targetSquare.piece.IsWhite ? Piece.King | Piece.Black : Piece.King | Piece.White;
+                    bool canContinue = targetSquare.IsEmpty() || targetSquare.piece.PieceType == oppositeColouredKing;
 
-                    if (isCapture)
-                    {
-                        validSquaresMask |= coord.ToBitBoard();
-                        break;
-                    }
-
+                    //Add the currently target move to the list of valid squares,
+                    //even if the piece is the same colour as the piece.
+                    //This is so that we can test if a piece is defended
+                    //when calculating king moves
                     if (!canContinue)
                     {
+                        validSquaresMask |= coord.ToBitBoard();
                         break;
                     }
 
                     validSquaresMask |= coord.ToBitBoard();
                 }
             }
-
             return validSquaresMask;
         }
         
@@ -172,80 +215,115 @@ namespace GameEngine.BitboardUtil
 
                 validSquaresMask |= coord.ToBitBoard();
             }
-            PrintBitboard(validSquaresMask);
-            validSquaresMask &= ~(square.piece.IsWhite ? GetWhitePiecesBitboard() : GetBlackPiecesBitboard());
+
             return validSquaresMask;
         }
 
-        //TODO: Definitely needs refactoring.
-        //Perhaps compare to a bitboard of all pieces
-        //instead of comparing to the squares directly?
         ulong GetPawnMoves(Square square)
         {
             ulong validMoveMask = 0;
-            ulong validCaptureMask = 0;
 
             Piece piece = square.piece;
-
+            Coord coord = square.coord;
 
             if (piece.PieceType == Piece.None)
                 return validMoveMask;
 
             if (piece.IsWhite)
             {   
-                Coord singlePawnMove = square.coord + singlePawnOffset;
-                Coord doublePawnMove = square.coord + doublePawnOffset;
-
-                Coord leftCaptureMove = square.coord + captureLeftOffset;
-                Coord rightCaptureMove = square.coord + captureRightOffset;
+                Coord singlePawnMove = coord + singlePawnOffset;
+                Coord doublePawnMove = coord + doublePawnOffset;
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (square.coord.rank == HEIGHT - 7)
+                    if (coord.rank == HEIGHT - 7)
                     {
                         validMoveMask |= doublePawnMove.ToBitBoard();
                     }
 
                     validMoveMask |= singlePawnMove.ToBitBoard();
-
-                    validCaptureMask |= leftCaptureMove.ToBitBoard();
-                    validCaptureMask |= rightCaptureMove.ToBitBoard();
                 }
             } else
             {
-                Coord singlePawnMove = square.coord - singlePawnOffset;
-                Coord doublePawnMove = square.coord - doublePawnOffset;
-
-                Coord leftCaptureMove = square.coord - captureRightOffset;
-                Coord rightCaptureMove = square.coord - captureLeftOffset;
+                Coord singlePawnMove = coord - singlePawnOffset;
+                Coord doublePawnMove = coord - doublePawnOffset;
 
                 if (singlePawnMove.IsValidSquare())
                 {
-                    if (square.coord.rank == HEIGHT - 2)
+                    if (coord.rank == HEIGHT - 2)
                     {
                         validMoveMask |= doublePawnMove.ToBitBoard();
                     }
+
                     validMoveMask |= singlePawnMove.ToBitBoard();
-                    
-                    validCaptureMask |= leftCaptureMove.ToBitBoard();
-                    validCaptureMask |= rightCaptureMove.ToBitBoard();
                 }
             }
-            validCaptureMask &= piece.IsWhite ? GetBlackPiecesBitboard() : GetWhitePiecesBitboard();
 
-            return validMoveMask | validCaptureMask;
+            return validMoveMask;
+        }
+
+        public ulong GetPawnAttacks(Square square)
+        {
+            ulong captureMask = 0;
+
+            Piece piece = square.piece;
+            Coord coord = square.coord;
+
+            if (piece.PieceType == Piece.None)
+                return captureMask;
+
+            if (piece.IsWhite)
+            {
+                Coord leftCaptureMove = coord + captureLeftOffset;
+                Coord rightCaptureMove = coord + captureRightOffset;
+
+                captureMask |= leftCaptureMove.ToBitBoard();
+                captureMask |= rightCaptureMove.ToBitBoard();
+            }
+            else
+            {
+                Coord leftCaptureMove = coord - captureRightOffset;
+                Coord rightCaptureMove = coord - captureLeftOffset;
+
+                captureMask |= leftCaptureMove.ToBitBoard();
+                captureMask |= rightCaptureMove.ToBitBoard();
+            }
+
+            return captureMask;
         }
 
         ulong GetKingMoves(Square square)
         {
+            ulong validSquaresMask = GetKingMovesNoChecks(square);
+            ulong attackedSquaresMask = GetAllAttacks(!square.piece.IsWhite);
+
+            return validSquaresMask & ~attackedSquaresMask;
+        }
+
+        ulong GetKingMovesNoChecks(Square square)
+        {
             ulong validSquaresMask = 0;
 
-            //King logic
+            foreach (Coord dir in OrthogonalOffsets)
+            {
+                Coord coord = square.coord + dir;
+                if (coord.IsValidSquare())
+                {
+                    validSquaresMask |= coord.ToBitBoard();
+                }
+            }
+            foreach (Coord dir in DiagonalOffsets)
+            {
+                Coord coord = square.coord + dir;
+                if (coord.IsValidSquare())
+                {
+                    validSquaresMask |= coord.ToBitBoard();
+                }
+            }
 
-
-
-            return validSquaresMask | square.coord.ToBitBoard();
+            return validSquaresMask;
         }
+
 
         public static bool Contains(ulong x, ulong y) {
             return (x | y) == x;
@@ -260,7 +338,7 @@ namespace GameEngine.BitboardUtil
                 bitboardString += (step | bitboard) != bitboard ? "0 " : "1 ";
                 if ((i + 1) % 8 == 0) {
                     bitboardString += "\n";
-                } 
+                }
             }
             return bitboardString;
         }

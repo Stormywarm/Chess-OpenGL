@@ -30,6 +30,8 @@ namespace GameEngine
 
         public bool IsWhite { get; }
 
+        public bool madeDoublePawnMove = false;
+
         public readonly static Dictionary<int, char> pieceToChar = new Dictionary<int, char>()
         {
             { Piece.None,   '_' },

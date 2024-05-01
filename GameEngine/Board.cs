@@ -122,7 +122,7 @@ namespace GameEngine
             for (int i = 0; i < squares.Length; i++)
             {
                 squares[i].Setup();
-                
+
                 Piece piece = squares[i].piece;
                 if (piece.PieceType != Piece.None)
                 {
@@ -151,15 +151,28 @@ namespace GameEngine
                 }
             }
         }
-        
+
         public bool TryMakeMove(Move move, ref bool isWhiteToMove, ref BitboardManager bitboard)
         {
             ulong validMovesBitboard = bitboard.GetMovesBitboard(squares[move.StartCoord.ToIndex()]);
 
-            bool isSideToMove = isWhiteToMove == squares[move.StartCoord.ToIndex()].piece.IsWhite;
-            bool isValidMove  = BitboardManager.Contains(validMovesBitboard, move.DestCoord.ToBitBoard()); 
+            Piece movedPiece = squares[move.StartCoord.ToIndex()].piece;
 
-            if (isSideToMove && isValidMove)
+            bool isSideToMove = isWhiteToMove == movedPiece.IsWhite;
+            bool isValidMove = BitboardManager.Contains(validMovesBitboard, move.DestCoord.ToBitBoard());
+
+            if (movedPiece.PieceTypeNoColour == Piece.Pawn)
+            {
+                bool isDoublePawnMove = MathF.Abs(move.DestCoord.rank - move.StartCoord.rank) == 2;
+                movedPiece.madeDoublePawnMove = isDoublePawnMove;
+            }
+
+            if (!isSideToMove || !isValidMove)
+            {
+                Console.WriteLine("Invalid move");
+                return false;
+            }
+            else
             {
                 Square startSquare = GetSquare(move.StartCoord);
                 Square destSquare = GetSquare(move.DestCoord);
@@ -177,11 +190,8 @@ namespace GameEngine
 
                 return true;
             }
-
-            return false;
         }
-        
-        
+
         void CastleShort()
         {
 

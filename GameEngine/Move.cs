@@ -14,9 +14,6 @@ namespace GameEngine
 {
     public class Move
     {
-        public bool isCapture = false;
-        public bool isCastles = false;
-
         public Coord StartCoord { get; }
         public Coord DestCoord { get; }
 

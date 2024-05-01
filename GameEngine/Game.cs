@@ -65,15 +65,16 @@ namespace GameEngine
 
             if (MouseState.IsButtonReleased(MouseButton.Left) && (heldPiece.PieceType != Piece.None))
             {
+                Console.WriteLine("Mouse released");
                 if (GetCursorCoord().IsValidSquare())
                 {
                     Square destSquare = board.GetSquare(GetCursorCoord());
                     Move move = new Move(originSquare.coord, destSquare.coord);
 
-                    if(!board.TryMakeMove(move, ref isWhiteToMove, ref bitboard))
-                    {
+                    bool isValidMove = board.TryMakeMove(move, ref isWhiteToMove, ref bitboard);
+                    if (!isValidMove) {
                         ReleasePiece();
-                    }
+                    } 
                 } else {
                     ReleasePiece();
                 }
@@ -139,7 +140,6 @@ namespace GameEngine
         {
             heldPiece.position = new Vector3(originSquare.position.X, originSquare.position.Y, -1);
             heldPiece.UpdatePosition();
-            heldPiece = new Piece(Piece.None);
         }
     }
 }
