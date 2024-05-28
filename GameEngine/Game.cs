@@ -12,10 +12,10 @@ namespace GameEngine
 {
     class Game : GameWindow
     {
-        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1), Flags = ContextFlags.ForwardCompatible }){ }
+        public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title, APIVersion = new Version(4, 1), Flags = ContextFlags.ForwardCompatible }) { }
 
         public Board board;
-        
+
         BitboardManager bitboard;
 
         Piece heldPiece;
@@ -51,7 +51,8 @@ namespace GameEngine
 
             if (MouseState.IsButtonPressed(MouseButton.Left))
             {
-                if (GetCursorCoord().IsValidSquare()) {
+                if (GetCursorCoord().IsValidSquare())
+                {
                     originSquare = board.GetSquare(GetCursorCoord());
                     heldPiece = originSquare.piece;
                 }
@@ -66,17 +67,20 @@ namespace GameEngine
             if (MouseState.IsButtonReleased(MouseButton.Left) && (heldPiece.PieceType != Piece.None))
             {
                 Console.WriteLine("Mouse released");
-                if (GetCursorCoord().IsValidSquare())
+                if (!GetCursorCoord().IsValidSquare())
+                {
+                    ReleasePiece();
+                }
+                else
                 {
                     Square destSquare = board.GetSquare(GetCursorCoord());
                     Move move = new Move(originSquare.coord, destSquare.coord);
 
                     bool isValidMove = board.TryMakeMove(move, ref isWhiteToMove, ref bitboard);
-                    if (!isValidMove) {
+                    if (!isValidMove)
+                    {
                         ReleasePiece();
-                    } 
-                } else {
-                    ReleasePiece();
+                    }
                 }
             }
 
@@ -101,7 +105,7 @@ namespace GameEngine
             board.RenderPieces();
             //Ugly sorting fix to ensure the currently held piece
             //is rendered after the other pieces
-            if(heldPiece != null && heldPiece.PieceType != Piece.None)
+            if (heldPiece != null && heldPiece.PieceType != Piece.None)
             {
                 heldPiece.Render();
             }

@@ -161,35 +161,39 @@ namespace GameEngine
             bool isSideToMove = isWhiteToMove == movedPiece.IsWhite;
             bool isValidMove = BitboardManager.Contains(validMovesBitboard, move.DestCoord.ToBitBoard());
 
-            if (movedPiece.PieceTypeNoColour == Piece.Pawn)
-            {
-                bool isDoublePawnMove = MathF.Abs(move.DestCoord.rank - move.StartCoord.rank) == 2;
-                movedPiece.madeDoublePawnMove = isDoublePawnMove;
-            }
-
             if (!isSideToMove || !isValidMove)
             {
                 Console.WriteLine("Invalid move");
                 return false;
             }
-            else
+
+            //TODO: Create SetFlags() function to set piece flags
+            if (movedPiece.PieceTypeNoColour == Piece.Pawn)
             {
-                Square startSquare = GetSquare(move.StartCoord);
-                Square destSquare = GetSquare(move.DestCoord);
-
-                destSquare.piece = new Piece(startSquare.piece);
-
-                destSquare.piece.position = new Vector3(destSquare.position.X, destSquare.position.Y, -1);
-                destSquare.piece.UpdatePosition();
-
-                startSquare.piece = new Piece(Piece.None);
-
-                isWhiteToMove = !isWhiteToMove;
-
-                bitboard.UpdateSquares(squares);
-
-                return true;
+                bool isDoublePawnMove = MathF.Abs(move.DestCoord.rank - move.StartCoord.rank) == 2;
+                movedPiece.madeDoublePawnMove = isDoublePawnMove;
             }
+            //TODO: Implement kingAttackRays in bitboardManager
+            //Currently is just a non-functional placeholder
+            ulong kingAttackRays = 0;
+
+            ulong pinnedPiecesMask = kingAttackRays & bitboard.GetAllAttacks(!movedPiece.IsWhite) & bitboard.GetPiecesBitboard(movedPiece.IsWhite);
+
+            Square startSquare = GetSquare(move.StartCoord);
+            Square destSquare = GetSquare(move.DestCoord);
+
+            destSquare.piece = new Piece(startSquare.piece);
+
+            destSquare.piece.position = new Vector3(destSquare.position.X, destSquare.position.Y, -1);
+            destSquare.piece.UpdatePosition();
+
+            startSquare.piece = new Piece(Piece.None);
+
+            isWhiteToMove = !isWhiteToMove;
+
+            bitboard.UpdateSquares(squares);
+
+            return true;
         }
 
         void CastleShort()
